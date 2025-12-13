@@ -1,0 +1,7 @@
+{
+  "name": "dr.doctor",
+  "description": "An intelligent medical assistant capable of analyzing symptoms and locating the nearest suitable specialists and hospitals.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
