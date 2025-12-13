@@ -186,7 +186,11 @@ export default function App() {
             <div className="p-5 flex-shrink-0 flex items-center justify-between border-b border-slate-100 dark:border-white/10">
                 <div className="flex items-center gap-2">
                      <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-700 rounded-lg flex items-center justify-center text-white shadow-lg">
-                        <img src="/assets/logo.png" alt="dr.doctor logo" className="w-24 h-24" />
+                        <img 
+                            src={isDarkMode ? "/assets/logo.png" : "/assets/black_logo.png"} 
+                            alt="dr.doctor logo" 
+                            className="w-24 h-24" 
+                        />
                     </div>
                     <span className="font-bold text-lg text-slate-800 dark:text-white">dr.doctor</span>
                 </div>
@@ -248,7 +252,11 @@ export default function App() {
                     <div className="relative group">
                         <div className="absolute inset-0 bg-teal-500 blur-lg opacity-20 group-hover:opacity-60 transition-opacity rounded-xl"></div>
                         <div className="">
-                            <img src="/assets/logo.png" alt="dr.doctor logo" className="w-20 h-20" />
+                            <img 
+                                src={isDarkMode ? "/assets/logo.png" : "/assets/black_logo.png"} 
+                                alt="dr.doctor logo" 
+                                className="w-20 h-20" 
+                            />
                         </div>
                     </div>
                     <h1 className="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600 dark:from-teal-400 dark:to-blue-500 tracking-tight">
