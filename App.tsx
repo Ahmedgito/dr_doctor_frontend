@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MapPin, ShieldCheck, HeartPulse, Mic, DollarSign, Star, Sun, Moon, MessageSquare, Clock, Sparkles, Menu, X } from 'lucide-react';
+import { Send, MapPin, ShieldCheck, Mic, DollarSign, Star, Sun, Moon, MessageSquare, Clock, Sparkles, Menu, X } from 'lucide-react';
 import { Message, Sender, Coordinates } from './types';
 import { sendMessageToGemini } from './services/geminiService';
 import MessageBubble from './components/MessageBubble';
@@ -186,7 +186,7 @@ export default function App() {
             <div className="p-5 flex-shrink-0 flex items-center justify-between border-b border-slate-100 dark:border-white/10">
                 <div className="flex items-center gap-2">
                      <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-700 rounded-lg flex items-center justify-center text-white shadow-lg">
-                        <HeartPulse size={18} />
+                        <img src="/assets/logo.png" alt="dr.doctor logo" className="w-24 h-24" />
                     </div>
                     <span className="font-bold text-lg text-slate-800 dark:text-white">dr.doctor</span>
                 </div>
@@ -246,9 +246,9 @@ export default function App() {
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                     <div className="relative group">
-                        <div className="absolute inset-0 bg-teal-500 blur-lg opacity-40 group-hover:opacity-60 transition-opacity rounded-xl"></div>
-                        <div className="relative w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center text-white shadow-inner border border-white/10">
-                            <HeartPulse size={22} className="animate-pulse" />
+                        <div className="absolute inset-0 bg-teal-500 blur-lg opacity-20 group-hover:opacity-60 transition-opacity rounded-xl"></div>
+                        <div className="">
+                            <img src="/assets/logo.png" alt="dr.doctor logo" className="w-20 h-20" />
                         </div>
                     </div>
                     <h1 className="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600 dark:from-teal-400 dark:to-blue-500 tracking-tight">
@@ -332,7 +332,7 @@ export default function App() {
                     </button>
                     <div className="flex items-center gap-2">
                         <div className="w-7 h-7 bg-gradient-to-br from-teal-500 to-teal-700 rounded-lg flex items-center justify-center text-white shadow-lg">
-                            <HeartPulse size={16} />
+                            <img src="/assets/logo.png" alt="dr.doctor logo" className="w-4 h-4" />
                         </div>
                         <span className="font-bold text-lg text-slate-800 dark:text-white">dr.doctor</span>
                     </div>
