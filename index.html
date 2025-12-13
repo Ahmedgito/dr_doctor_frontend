@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+    <meta name="description" content="dr.doctor - Your AI Medical Assistant">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192x192.png">
+    
     <title>dr.doctor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -50,22 +56,30 @@
       }
 
       body {
-        /* Rich dark gradient background */
-        background: radial-gradient(circle at top left, #134e4a, #0f172a, #020617);
+        /* Default Light Mode Gradient */
+        background: radial-gradient(circle at top left, #f0fdfa, #f8fafc, #cbd5e1);
         background-attachment: fixed;
         background-size: cover;
+        transition: background 0.5s ease;
+      }
+      
+      .dark body {
+        /* Dark Mode Gradient */
+        background: radial-gradient(circle at top left, #134e4a, #0f172a, #020617);
       }
       
       /* Glassmorphism Utilities */
       .glass-panel {
-        background: rgba(255, 255, 255, 0.05);
+        /* Light mode glass */
+        background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.4);
       }
       .dark .glass-panel {
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        /* Dark mode glass */
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.05);
       }
 
       .glass-input {
@@ -82,10 +96,16 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(148, 163, 184, 0.5); /* Slate-400 equivalent for light */
         border-radius: 10px;
       }
+      .dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+      }
       ::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.8);
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
         background: rgba(255, 255, 255, 0.2);
       }
 
@@ -112,5 +132,18 @@
   <body class="text-slate-900 dark:text-slate-100 antialiased h-full overflow-hidden selection:bg-teal-500/30">
     <div id="root" class="h-full"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('SW registered: ', registration);
+            })
+            .catch(registrationError => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
