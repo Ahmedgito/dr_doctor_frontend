@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MapPin, ShieldCheck, Mic, DollarSign, Star, Sun, Moon, MessageSquare, Clock, Sparkles, Menu, X } from 'lucide-react';
+import { Send, MapPin, ShieldCheck, Mic, DollarSign, Star, Sun, Moon, Sparkles, Menu, X } from 'lucide-react';
 import { Message, Sender, Coordinates } from './types';
-import { sendMessageToGemini } from './services/geminiService';
+import { streamChat, ChatFilters } from './services/chatApi';
 import MessageBubble from './components/MessageBubble';
-import ReactMarkdown from 'react-markdown';
 
 const INITIAL_MESSAGE: Message = {
   id: 'init-1',
@@ -23,16 +22,9 @@ export default function App() {
   const [activeFilters, setActiveFilters] = useState<FilterType[]>(['nearest']);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  // Use a ref for the scrollable container
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
-  // Mock Recent Chats
-  const recentChats = [
-    { id: 1, title: 'Severe Migraine Symptoms', date: 'Today' },
-    { id: 2, title: 'Pediatrician nearby', date: 'Yesterday' },
-    { id: 3, title: 'Skin Rash Consultation', date: '3 days ago' },
-  ];
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -111,55 +103,60 @@ export default function App() {
 
     const userText = inputValue.trim();
     setInputValue('');
-    
-    // Add User Message
-    const newUserMessage: Message = {
+    setIsProcessing(true);
+
+    const userMsg: Message = {
       id: Date.now().toString(),
       text: userText,
       sender: Sender.User,
       timestamp: new Date(),
     };
-    
-    setMessages(prev => [...prev, newUserMessage]);
-    setIsProcessing(true);
+    setMessages(prev => [...prev, userMsg]);
 
-    // Add Typing Indicator
-    const typingMessageId = 'typing-' + Date.now();
+    const botMsgId = 'bot-' + Date.now();
     setMessages(prev => [...prev, {
-        id: typingMessageId,
-        text: '',
-        sender: Sender.Bot,
-        timestamp: new Date(),
-        isTyping: true
+      id: botMsgId,
+      text: '',
+      sender: Sender.Bot,
+      timestamp: new Date(),
+      isTyping: true,
     }]);
 
-    try {
-      // Call Gemini (Mock service)
-      const response = await sendMessageToGemini(userText, location);
-
-      // Remove Typing Indicator and Add Response
-      setMessages(prev => {
-        const filtered = prev.filter(msg => msg.id !== typingMessageId);
-        return [...filtered, {
-          id: Date.now().toString(),
-          text: response.text,
-          sender: Sender.Bot,
-          timestamp: new Date(),
-          groundingMaps: response.groundingMaps
-        }];
-      });
-
-    } catch (error) {
-      setMessages(prev => prev.filter(msg => msg.id !== typingMessageId));
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        text: "I'm having trouble connecting right now. Please try again.",
-        sender: Sender.Bot,
-        timestamp: new Date()
-      }]);
-    } finally {
-      setIsProcessing(false);
+    // Map active filter toggles to backend filter params
+    const filters: ChatFilters = {};
+    if (location && activeFilters.includes('nearest')) {
+      filters.user_lat = location.latitude;
+      filters.user_lng = location.longitude;
     }
+    if (activeFilters.includes('price')) filters.max_fee = 1500;
+    if (activeFilters.includes('experienced')) filters.min_satisfaction = 80;
+
+    let accText = '';
+
+    await streamChat(userText, conversationId, filters, {
+      onText: (chunk) => {
+        accText += chunk;
+        setMessages(prev => prev.map(msg =>
+          msg.id === botMsgId ? { ...msg, text: accText, isTyping: false } : msg
+        ));
+      },
+      onMetadata: (meta) => {
+        setConversationId(meta.conversation_id);
+        setMessages(prev => prev.map(msg =>
+          msg.id === botMsgId
+            ? { ...msg, doctors: meta.doctors_shown, urgency: meta.urgency, emergency: meta.emergency }
+            : msg
+        ));
+      },
+      onError: (err) => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === botMsgId
+            ? { ...msg, text: err.message, isTyping: false }
+            : msg
+        ));
+      },
+      onDone: () => setIsProcessing(false),
+    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -214,25 +211,9 @@ export default function App() {
 
                 <div>
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 px-2">Recent History</h4>
-                    <div className="space-y-1">
-                        {recentChats.map((chat) => (
-                            <button 
-                                key={chat.id}
-                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-left"
-                            >
-                                <MessageSquare size={16} className="text-slate-400 dark:text-slate-500" />
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
-                                        {chat.title}
-                                    </p>
-                                    <div className="flex items-center gap-1.5 mt-0.5 text-slate-400 dark:text-slate-500">
-                                        <Clock size={10} />
-                                        <span className="text-[10px]">{chat.date}</span>
-                                    </div>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
+                    <p className="px-3 py-6 text-xs text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+                        No conversations yet. Past chats will appear here after your backend is connected.
+                    </p>
                 </div>
             </div>
             
@@ -293,25 +274,9 @@ export default function App() {
             <div className="flex-1 overflow-y-auto px-2 -mx-2">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 px-2">Recent History</h4>
                 
-                <div className="space-y-1">
-                    {recentChats.map((chat) => (
-                        <button 
-                            key={chat.id}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100/50 dark:hover:bg-white/5 transition-all group text-left border border-transparent hover:border-slate-200/50 dark:hover:border-white/5 hover:translate-x-1"
-                        >
-                            <MessageSquare size={16} className="text-slate-400 dark:text-slate-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
-                            <div className="flex-1 overflow-hidden">
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white truncate transition-colors">
-                                    {chat.title}
-                                </p>
-                                <div className="flex items-center gap-1.5 mt-0.5 text-slate-400 dark:text-slate-500">
-                                    <Clock size={10} />
-                                    <span className="text-[10px]">{chat.date}</span>
-                                </div>
-                            </div>
-                        </button>
-                    ))}
-                </div>
+                <p className="px-3 py-8 text-xs text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+                    No conversations yet. Past chats will appear here after your backend is connected.
+                </p>
             </div>
         </div>
 
