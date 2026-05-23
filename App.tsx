@@ -19,7 +19,7 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [location, setLocation] = useState<Coordinates | null>(null);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
-  const [activeFilters, setActiveFilters] = useState<FilterType[]>(['nearest']);
+  const [activeFilters, setActiveFilters] = useState<FilterType[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
