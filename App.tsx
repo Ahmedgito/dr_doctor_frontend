@@ -144,7 +144,13 @@ export default function App() {
         setConversationId(meta.conversation_id);
         setMessages(prev => prev.map(msg =>
           msg.id === botMsgId
-            ? { ...msg, doctors: meta.doctors_shown, urgency: meta.urgency, emergency: meta.emergency }
+            ? {
+                ...msg,
+                phase: meta.phase,
+                emergency: meta.emergency,
+                doctors: meta.phase === 'recommendation' ? meta.doctors_shown : undefined,
+                urgency: meta.phase === 'recommendation' ? meta.urgency : undefined,
+              }
             : msg
         ));
       },

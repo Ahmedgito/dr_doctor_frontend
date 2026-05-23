@@ -1,4 +1,4 @@
-import type { Doctor, UrgencyLevel } from '../types';
+import type { Doctor, UrgencyLevel, ConversationPhase } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -17,6 +17,7 @@ interface TextEvent {
 export interface MetadataEvent {
   type: 'metadata';
   conversation_id: string;
+  phase: ConversationPhase;
   emergency: boolean;
   safe_to_proceed: boolean;
   urgency: UrgencyLevel;

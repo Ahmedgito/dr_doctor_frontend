@@ -88,8 +88,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
             )}
           </div>
 
-          {/* Urgency badge — shown for non-emergency bot messages */}
-          {!isUser && message.urgency && !message.emergency && (
+          {/* Urgency badge — shown for non-emergency bot messages on recommendation phase */}
+          {!isUser && message.urgency && !message.emergency && message.phase === 'recommendation' && (
             <span className={`self-start text-[11px] font-semibold px-3 py-1 rounded-full border ${URGENCY_STYLES[message.urgency]}`}>
               {URGENCY_LABELS[message.urgency]}
             </span>
@@ -116,7 +116,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           )}
 
           {/* Doctor cards from backend */}
-          {!isUser && !message.emergency && message.doctors && message.doctors.length > 0 && (
+          {!isUser && !message.emergency && message.phase === 'recommendation' && message.doctors && message.doctors.length > 0 && (
             <div className="flex gap-3 overflow-x-auto pb-3 pt-1 px-1 scrollbar-hide -ml-1">
               {message.doctors.map((doctor, idx) => (
                 <DoctorCard key={doctor.doctor_id} doctor={doctor} index={idx} />

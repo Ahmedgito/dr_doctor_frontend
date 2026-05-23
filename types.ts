@@ -40,6 +40,14 @@ export interface Doctor {
 
 export type UrgencyLevel = 'low' | 'moderate' | 'high' | 'emergency';
 
+export type ConversationPhase =
+  | 'greeting'
+  | 'chitchat'
+  | 'gathering'
+  | 'confirm'
+  | 'recommendation'
+  | 'emergency';
+
 export interface Message {
   id: string;
   text: string;
@@ -50,6 +58,7 @@ export interface Message {
   doctors?: Doctor[];
   urgency?: UrgencyLevel;
   emergency?: boolean;
+  phase?: ConversationPhase;
 }
 
 export interface ChatState {
