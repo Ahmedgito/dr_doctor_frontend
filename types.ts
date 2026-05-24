@@ -67,3 +67,26 @@ export interface ChatState {
   location: Coordinates | null;
   locationError: string | null;
 }
+
+export interface ConversationSummary {
+  id: string;
+  title: string | null;
+  is_archived: boolean;
+  conv_state: string;
+  created_at: string;
+  last_active_at: string;
+}
+
+export interface ConversationMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  symptoms_extracted: string[] | null;
+  specialties_targeted: string[] | null;
+  urgency: string | null;
+  created_at: string;
+}
+
+export interface ConversationWithMessages extends ConversationSummary {
+  messages: ConversationMessage[];
+}

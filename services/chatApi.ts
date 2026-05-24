@@ -1,6 +1,6 @@
 import type { Doctor, UrgencyLevel, ConversationPhase } from '../types';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
 export interface ChatFilters {
   user_lat?: number;
@@ -44,14 +44,19 @@ export async function streamChat(
   message: string,
   conversationId: string | null,
   filters: ChatFilters,
-  callbacks: StreamCallbacks
+  callbacks: StreamCallbacks,
+  getToken: (() => Promise<string | null>) | null = null
 ): Promise<void> {
   let response: Response;
+
+  const token = getToken ? await getToken() : null;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   try {
     response = await fetch(`${API_BASE}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         message,
         ...(conversationId ? { conversation_id: conversationId } : {}),
