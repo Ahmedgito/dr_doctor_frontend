@@ -3,6 +3,7 @@ import { Send, MapPin, ShieldCheck, Mic, DollarSign, Star, Sun, Moon, Sparkles, 
 import { Message, Sender, Coordinates } from './types';
 import { streamChat, ChatFilters } from './services/chatApi';
 import MessageBubble from './components/MessageBubble';
+import UserMenu from './components/UserMenu';
 
 const INITIAL_MESSAGE: Message = {
   id: 'init-1',
@@ -299,7 +300,12 @@ export default function App() {
         {/* Chat Container */}
         <div className="flex-1 flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl md:rounded-3xl shadow-2xl border-slate-100 dark:border-white/10 md:border relative overflow-hidden transition-colors">
             
-            {/* Mobile Header - Fixed positioning within flex column */}
+            {/* Desktop header — user top-right */}
+            <div className="hidden md:flex flex-shrink-0 items-center justify-end px-6 py-4 border-b border-slate-100 dark:border-white/5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl z-20">
+                <UserMenu />
+            </div>
+
+            {/* Mobile Header */}
             <div className="md:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-white/5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl z-20">
                  <div className="flex items-center gap-3">
                     <button 
@@ -317,6 +323,7 @@ export default function App() {
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
+                    <UserMenu compact />
                     <button onClick={toggleTheme} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/5">
                          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                     </button>
