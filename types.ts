@@ -20,8 +20,8 @@ export interface Doctor {
   doctor_id: string;
   name: string;
   specialty: string | null;
-  hospital_name: string;
-  hospital_address: string;
+  hospital_name: string | null;
+  hospital_address: string | null;
   city: string | null;
   fee_walk_in: number | null;
   fee_online: number | null;
@@ -29,7 +29,8 @@ export interface Doctor {
   reviews_count: number | null;
   distance_km: number | null;
   profile_url: string;
-  scores: {
+  // scores present from FSM pipeline; may be neutral placeholders from orchestrator
+  scores?: {
     semantic: number;
     proximity: number;
     rating: number;
@@ -54,6 +55,8 @@ export interface Message {
   sender: Sender;
   timestamp: Date;
   isTyping?: boolean;
+  /** Short status text shown below the typing dots while the orchestrator runs tools */
+  toolStatusHint?: string;
   groundingMaps?: GroundingMap[];
   doctors?: Doctor[];
   urgency?: UrgencyLevel;

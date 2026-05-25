@@ -2,17 +2,19 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MapPin, ShieldCheck, Mic, DollarSign, Star, Sun, Moon, Sparkles, Menu, X, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { useAuth } from '@clerk/react';
 import { Message, Sender, Coordinates, ConversationSummary } from './types';
-import { streamChat, ChatFilters } from './services/chatApi';
-import { listConversations, getConversation, deleteConversation } from './services/conversationsApi';
+import { streamChat, ChatFilters, toolStatusHint } from './services/chatApi';
+import { listConversations, getConversation, deleteConversation, createConversation } from './services/conversationsApi';
 import MessageBubble from './components/MessageBubble';
 import UserMenu from './components/UserMenu';
 
-const INITIAL_MESSAGE: Message = {
-  id: 'init-1',
-  text: "Hello! I'm **Dr. Doctor**. \n\nI can help you analyze your symptoms and find the best nearby specialists or hospitals. \n\nHow are you feeling today?",
-  sender: Sender.Bot,
-  timestamp: new Date(),
-};
+function createInitialMessage(): Message {
+  return {
+    id: 'init-' + Date.now(),
+    text: "Hello! I'm **Dr. Doctor**. \n\nI can help you analyze your symptoms and find the best nearby specialists or hospitals. \n\nHow are you feeling today?",
+    sender: Sender.Bot,
+    timestamp: new Date(),
+  };
+}
 
 type FilterType = 'price' | 'nearest' | 'experienced';
 
@@ -31,7 +33,7 @@ function formatRelativeTime(dateStr: string): string {
 export default function App() {
   const { getToken, isSignedIn } = useAuth();
 
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState<Message[]>(() => [createInitialMessage()]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [location, setLocation] = useState<Coordinates | null>(null);
@@ -115,17 +117,30 @@ export default function App() {
     if (isSignedIn) {
       loadConversations();
     } else {
-      // Anonymous → authenticated upgrade: clear local conversation state
+      // Sign-out: clear all local conversation state
       setConversations([]);
       setConversationId(null);
+      setMessages([createInitialMessage()]);
     }
   }, [isSignedIn, loadConversations]);
 
-  const startNewConversation = () => {
-    setMessages([INITIAL_MESSAGE]);
+  const startNewConversation = async () => {
+    // Reset UI immediately so it feels instant
+    setMessages([createInitialMessage()]);
     setConversationId(null);
     setRateLimitMsg(null);
     setIsSidebarOpen(false);
+
+    if (isSignedIn) {
+      try {
+        // Option A: create conversation up-front so tab appears in sidebar immediately
+        const conv = await createConversation(getToken);
+        setConversationId(conv.id);
+        setConversations(prev => [conv, ...prev]);
+      } catch {
+        // Fallback to Option B: backend will create conversation on first message
+      }
+    }
   };
 
   const selectConversation = async (id: string) => {
@@ -138,7 +153,7 @@ export default function App() {
         sender: m.role === 'user' ? Sender.User : Sender.Bot,
         timestamp: new Date(m.created_at),
       }));
-      setMessages(restored.length > 0 ? restored : [INITIAL_MESSAGE]);
+      setMessages(restored.length > 0 ? restored : [createInitialMessage()]);
       setConversationId(id);
       setRateLimitMsg(null);
       setIsSidebarOpen(false);
@@ -170,6 +185,9 @@ export default function App() {
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isProcessing) return;
+
+    // Detect first user turn so we can poll for the LLM-generated title afterwards
+    const isFirstTurn = !messages.some(m => m.sender === Sender.User);
 
     const userText = inputValue.trim();
     setInputValue('');
@@ -204,10 +222,17 @@ export default function App() {
     let accText = '';
 
     await streamChat(userText, conversationId, filters, {
+      onToolStatus: (name, status) => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === botMsgId
+            ? { ...msg, toolStatusHint: toolStatusHint(name, status) }
+            : msg
+        ));
+      },
       onText: (chunk) => {
         accText += chunk;
         setMessages(prev => prev.map(msg =>
-          msg.id === botMsgId ? { ...msg, text: accText, isTyping: false } : msg
+          msg.id === botMsgId ? { ...msg, text: accText, isTyping: false, toolStatusHint: undefined } : msg
         ));
       },
       onMetadata: (meta) => {
@@ -251,6 +276,8 @@ export default function App() {
       onDone: () => {
         setIsProcessing(false);
         loadConversations(); // refresh sidebar after each completed turn
+        // Backend generates the LLM title ~1-2 s after the first turn — poll once more
+        if (isFirstTurn) setTimeout(() => loadConversations(), 2500);
       },
     }, getToken);
   };
@@ -265,7 +292,7 @@ export default function App() {
   // ── Conversation sidebar list (shared between desktop + mobile) ──────────
 
   const ConversationList = () => (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <button
         onClick={startNewConversation}
         className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 text-sm font-medium transition-colors border border-teal-500/20 dark:border-teal-500/10"
@@ -274,13 +301,28 @@ export default function App() {
         New Chat
       </button>
 
-      {convLoading ? (
-        <div className="flex justify-center py-6">
-          <div className="w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : conversations.length > 0 ? (
-        <div className="space-y-0.5 mt-1">
-          {conversations.map(conv => (
+      <div className="space-y-0.5 mt-1">
+        {/* Active "New conversation" tab — shown while no message has been sent yet */}
+        {conversationId === null && (
+          <div className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-teal-500/10 dark:bg-teal-500/10 border border-teal-500/20">
+            <MessageSquare size={13} className="text-teal-500 dark:text-teal-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-teal-700 dark:text-teal-300 truncate leading-snug">
+                New conversation
+              </p>
+              <p className="text-[10px] text-teal-500/70 dark:text-teal-400/70 mt-0.5">
+                Just now
+              </p>
+            </div>
+          </div>
+        )}
+
+        {convLoading ? (
+          <div className="flex justify-center py-6">
+            <div className="w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : conversations.length > 0 ? (
+          conversations.map(conv => (
             <div
               key={conv.id}
               onClick={() => selectConversation(conv.id)}
@@ -307,13 +349,13 @@ export default function App() {
                 <Trash2 size={12} />
               </button>
             </div>
-          ))}
-        </div>
-      ) : (
-        <p className="px-3 py-6 text-xs text-slate-500 dark:text-slate-400 text-center leading-relaxed">
-          No conversations yet. Start chatting to build your history.
-        </p>
-      )}
+          ))
+        ) : conversationId !== null ? (
+          <p className="px-3 py-6 text-xs text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+            No conversations yet. Start chatting to build your history.
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -467,6 +509,14 @@ export default function App() {
               </div>
             </div>
             <div className="flex items-center gap-0.5 flex-shrink-0">
+              <button
+                onClick={startNewConversation}
+                className="p-2 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-400/10 rounded-full transition-colors"
+                aria-label="New chat"
+                title="New chat"
+              >
+                <Plus size={20} />
+              </button>
               <button onClick={toggleTheme} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/5">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>

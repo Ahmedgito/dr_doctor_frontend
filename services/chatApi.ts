@@ -14,6 +14,13 @@ interface TextEvent {
   content: string;
 }
 
+/** New in orchestrator mode: emitted while a tool is executing */
+export interface ToolStatusEvent {
+  type: 'tool';
+  name: string;
+  status: 'running' | 'done' | 'error';
+}
+
 export interface MetadataEvent {
   type: 'metadata';
   conversation_id: string;
@@ -25,6 +32,8 @@ export interface MetadataEvent {
   specialties_targeted: string[];
   user_facing_note: string;
   doctors_shown: Doctor[];
+  /** Present when orchestrator mode is active */
+  tool_calls_made?: Array<{ name: string; status: string; elapsed_ms: number }>;
 }
 
 interface ErrorEvent {
@@ -38,6 +47,22 @@ export interface StreamCallbacks {
   onMetadata: (meta: MetadataEvent) => void;
   onError: (err: { code: number; message: string }) => void;
   onDone: () => void;
+  /** Called when the orchestrator starts or finishes a tool step */
+  onToolStatus?: (name: string, status: ToolStatusEvent['status']) => void;
+}
+
+/** Human-readable hint for each tool name shown in the typing indicator */
+const TOOL_HINTS: Record<string, string> = {
+  update_case_memory:  'Understanding your symptoms…',
+  search_doctors:      'Searching for doctors…',
+  get_doctor_details:  'Looking up doctor details…',
+  refine_search:       'Refining search results…',
+  trigger_emergency:   'Assessing urgency…',
+};
+
+export function toolStatusHint(name: string, status: ToolStatusEvent['status']): string {
+  if (status === 'done') return '';
+  return TOOL_HINTS[name] ?? 'Thinking…';
 }
 
 export async function streamChat(
@@ -101,10 +126,16 @@ export async function streamChat(
         }
 
         try {
-          const event = JSON.parse(raw) as TextEvent | MetadataEvent | ErrorEvent;
-          if (event.type === 'text') callbacks.onText(event.content);
-          else if (event.type === 'metadata') callbacks.onMetadata(event);
-          else if (event.type === 'error') callbacks.onError(event);
+          const event = JSON.parse(raw) as TextEvent | ToolStatusEvent | MetadataEvent | ErrorEvent;
+          if (event.type === 'text') {
+            callbacks.onText(event.content);
+          } else if (event.type === 'tool') {
+            callbacks.onToolStatus?.(event.name, event.status);
+          } else if (event.type === 'metadata') {
+            callbacks.onMetadata(event);
+          } else if (event.type === 'error') {
+            callbacks.onError(event);
+          }
         } catch {
           // malformed SSE line — skip
         }

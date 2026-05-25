@@ -1,9 +1,11 @@
 import React from 'react';
+import { useUser } from '@clerk/react';
 import { Message, Sender, UrgencyLevel } from '../types';
-import { User, Sparkles, AlertTriangle, Phone } from 'lucide-react';
+import { User, AlertTriangle, Phone } from 'lucide-react';
 import HospitalCard from './HospitalCard';
 import DoctorCard from './DoctorCard';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MessageBubbleProps {
   message: Message;
@@ -24,8 +26,10 @@ const URGENCY_LABELS: Record<UrgencyLevel, string> = {
 };
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+  const { user } = useUser();
   const isUser = message.sender === Sender.User;
   const isSystem = message.sender === Sender.System;
+  const userImageUrl = user?.imageUrl;
 
   if (isSystem) {
     return (
@@ -42,14 +46,33 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       <div className={`flex max-w-[90%] md:max-w-[80%] gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
 
         {/* Avatar */}
-        <div className={`
-            flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shadow-lg border border-white/10
-            ${isUser
-                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
-                : 'bg-gradient-to-br from-teal-500/20 to-teal-500/10 text-teal-600 dark:text-teal-400 backdrop-blur-md bg-white dark:bg-transparent'
-            }
-        `}>
-          {isUser ? <User size={18} /> : <Sparkles size={18} />}
+        <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden shadow-lg border border-white/10">
+          {isUser ? (
+            userImageUrl ? (
+              <img
+                src={userImageUrl}
+                alt={user?.fullName ?? 'You'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
+                <User size={18} />
+              </div>
+            )
+          ) : (
+            <>
+              <img
+                src="/assets/logo.png"
+                alt="Dr. Doctor"
+                className="hidden dark:block w-full h-full object-contain bg-slate-900 p-1"
+              />
+              <img
+                src="/assets/black_logo.png"
+                alt="Dr. Doctor"
+                className="block dark:hidden w-full h-full object-contain bg-white p-1"
+              />
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 min-w-0">
@@ -65,21 +88,41 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
             `}
           >
             {message.isTyping ? (
-              <div className="flex space-x-2 py-1.5 px-1">
-                <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-bounce"></div>
+              <div>
+                <div className="flex space-x-2 py-1.5 px-1">
+                  <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-bounce"></div>
+                </div>
+                {message.toolStatusHint && (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 italic mt-1 px-1 transition-all duration-300">
+                    {message.toolStatusHint}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="markdown-content">
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
-                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                    ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 marker:text-teal-500 dark:marker:text-teal-400" {...props} />,
-                    ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 marker:text-teal-500 dark:marker:text-teal-400" {...props} />,
-                    li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-                    strong: ({ node, ...props }) => <span className="font-bold text-teal-700 dark:text-teal-200" {...props} />,
-                    a: ({ node, ...props }) => <a className="text-teal-600 dark:text-teal-400 hover:underline underline-offset-2" {...props} />,
+                    p: ({ node, ...props }) => <p className="mb-3 last:mb-0 leading-relaxed" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-3 space-y-1 marker:text-teal-500 dark:marker:text-teal-400" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-3 space-y-1 marker:text-teal-500 dark:marker:text-teal-400" {...props} />,
+                    li: ({ node, ...props }) => <li className="leading-relaxed" {...props} />,
+                    strong: ({ node, ...props }) => <span className="font-semibold text-teal-700 dark:text-teal-200" {...props} />,
+                    a: ({ node, ...props }) => <a className="text-teal-600 dark:text-teal-400 hover:underline underline-offset-2 break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="font-semibold text-slate-700 dark:text-slate-200 mt-4 mb-1.5 first:mt-0" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="font-bold text-slate-700 dark:text-slate-200 mt-4 mb-2 first:mt-0" {...props} />,
+                    hr: ({ node, ...props }) => <hr className="my-3 border-slate-200 dark:border-white/10" {...props} />,
+                    table: ({ node, ...props }) => (
+                      <div className="overflow-x-auto my-3 rounded-xl border border-slate-200 dark:border-white/10">
+                        <table className="min-w-full text-sm" {...props} />
+                      </div>
+                    ),
+                    thead: ({ node, ...props }) => <thead className="bg-slate-50 dark:bg-white/5" {...props} />,
+                    th: ({ node, ...props }) => <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-white/10" {...props} />,
+                    td: ({ node, ...props }) => <td className="px-3 py-2 border-b border-slate-100 dark:border-white/5 last:border-0 text-slate-700 dark:text-slate-300" {...props} />,
+                    tr: ({ node, ...props }) => <tr className="even:bg-slate-50/50 dark:even:bg-white/[0.02]" {...props} />,
                   }}
                 >
                   {message.text}

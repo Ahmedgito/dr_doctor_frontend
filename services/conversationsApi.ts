@@ -10,6 +10,19 @@ async function authHeaders(getToken: GetToken): Promise<Record<string, string>> 
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export async function createConversation(
+  getToken: GetToken
+): Promise<ConversationSummary> {
+  const headers = await authHeaders(getToken);
+  const res = await fetch(`${API_BASE}/api/conversations`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function listConversations(
   getToken: GetToken,
   page = 1,
