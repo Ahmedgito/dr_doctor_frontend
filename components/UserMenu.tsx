@@ -1,5 +1,6 @@
 import { UserButton, useClerk, useUser } from '@clerk/react';
 import { LogOut } from 'lucide-react';
+import { useClerkAppearance } from '../hooks/useClerkAppearance';
 
 type UserMenuProps = {
   /** @deprecated use variant="compact" */
@@ -16,7 +17,7 @@ function LogoutButton({ className = '' }: { className?: string }) {
       onClick={() => signOut({ redirectUrl: '/sign-in' })}
       aria-label="Sign out"
       title="Sign out"
-      className={`p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors ${className}`}
+      className={`p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 border border-transparent hover:border-teal-500/20 transition-colors ${className}`}
     >
       <LogOut size={18} />
     </button>
@@ -26,6 +27,7 @@ function LogoutButton({ className = '' }: { className?: string }) {
 export default function UserMenu({ compact = false, variant }: UserMenuProps) {
   const resolvedVariant = variant ?? (compact ? 'compact' : 'default');
   const { user, isLoaded } = useUser();
+  const appearance = useClerkAppearance();
 
   const displayName =
     user?.fullName ||
@@ -62,9 +64,11 @@ export default function UserMenu({ compact = false, variant }: UserMenuProps) {
       <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
         <UserButton
           appearance={{
+            ...appearance,
             elements: {
+              ...appearance.elements,
               avatarBox: 'w-10 h-10',
-              userButtonTrigger: 'focus:shadow-none',
+              userButtonTrigger: 'focus:shadow-none ring-0',
             },
           }}
         />
@@ -100,9 +104,11 @@ export default function UserMenu({ compact = false, variant }: UserMenuProps) {
         </span>
         <UserButton
           appearance={{
+            ...appearance,
             elements: {
+              ...appearance.elements,
               avatarBox: resolvedVariant === 'compact' ? 'w-7 h-7' : 'w-8 h-8',
-              userButtonTrigger: 'focus:shadow-none',
+              userButtonTrigger: 'focus:shadow-none ring-0',
             },
           }}
         />

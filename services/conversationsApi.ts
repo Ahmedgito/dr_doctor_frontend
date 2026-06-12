@@ -2,92 +2,42 @@ import type { ConversationSummary, ConversationWithMessages } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
-type GetToken = (() => Promise<string | null>) | null;
-
-async function authHeaders(getToken: GetToken): Promise<Record<string, string>> {
-  if (!getToken) return {};
-  const token = await getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-export async function createConversation(
-  getToken: GetToken
-): Promise<ConversationSummary> {
-  const headers = await authHeaders(getToken);
-  const res = await fetch(`${API_BASE}/api/conversations`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
+/**
+ * List conversations for a Clerk user_id, ordered by most recent activity.
+ * Returns an empty array on network error so the sidebar degrades gracefully.
+ */
 export async function listConversations(
-  getToken: GetToken,
-  page = 1,
-  pageSize = 20
-): Promise<{ conversations: ConversationSummary[]; total: number; page: number; page_size: number }> {
-  const headers = await authHeaders(getToken);
-  const res = await fetch(
-    `${API_BASE}/api/conversations?page=${page}&page_size=${pageSize}`,
-    { headers }
-  );
-  if (!res.ok) throw new Error(await res.text());
+  userId: string,
+  limit = 30,
+): Promise<ConversationSummary[]> {
+  const params = new URLSearchParams({ user_id: userId, limit: String(limit) });
+  const res = await fetch(`${API_BASE}/api/conversations?${params}`);
+  if (!res.ok) throw new Error(`Failed to list conversations: ${res.status}`);
   return res.json();
 }
 
-export async function getConversation(
-  getToken: GetToken,
-  id: string
-): Promise<ConversationWithMessages | null> {
-  const headers = await authHeaders(getToken);
-  const res = await fetch(`${API_BASE}/api/conversations/${id}`, { headers });
+/** Fetch a single conversation with its full message history. */
+export async function getConversation(id: string): Promise<ConversationWithMessages | null> {
+  const res = await fetch(`${API_BASE}/api/conversations/${id}`);
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(`Failed to get conversation: ${res.status}`);
   return res.json();
 }
 
-export async function renameConversation(
-  getToken: GetToken,
-  id: string,
-  title: string
-): Promise<ConversationSummary> {
-  const headers = await authHeaders(getToken);
+/** Rename a conversation's title. No-op 404s so stale IDs don't throw. */
+export async function renameConversation(id: string, title: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/conversations/${id}`, {
     method: 'PATCH',
-    headers: { ...headers, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  if (res.ok || res.status === 404) return;
+  throw new Error(`Failed to rename conversation: ${res.status}`);
 }
 
-export async function archiveConversation(
-  getToken: GetToken,
-  id: string,
-  archived = true
-): Promise<ConversationSummary> {
-  const headers = await authHeaders(getToken);
-  const res = await fetch(`${API_BASE}/api/conversations/${id}`, {
-    method: 'PATCH',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ is_archived: archived }),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-export async function deleteConversation(
-  getToken: GetToken,
-  id: string
-): Promise<boolean> {
-  const headers = await authHeaders(getToken);
-  const res = await fetch(`${API_BASE}/api/conversations/${id}`, {
-    method: 'DELETE',
-    headers,
-  });
-  if (res.status === 404) return false;
-  if (!res.ok) throw new Error(await res.text());
-  return true;
+/** Delete a conversation. Silently succeeds if already gone. */
+export async function deleteConversation(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/conversations/${id}`, { method: 'DELETE' });
+  if (res.ok || res.status === 404) return;
+  throw new Error(`Failed to delete conversation: ${res.status}`);
 }
